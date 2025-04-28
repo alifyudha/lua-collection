@@ -147,11 +147,26 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = localPlayer.PlayerGui
 
--- Create main container frame
+-- Create a tweening function for smooth animations
+local function tweenSize(object, newSize, newPosition, duration)
+    local tweenService = game:GetService("TweenService")
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    local properties = {Size = newSize}
+    
+    if newPosition then
+        properties.Position = newPosition
+    end
+    
+    local tween = tweenService:Create(object, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+-- Create main container frame with smaller initial size
 local mainContainer = Instance.new("Frame")
 mainContainer.Name = "MainContainer"
-mainContainer.Size = UDim2.new(0, 300, 0, 450) -- Increased height for new controls
-mainContainer.Position = UDim2.new(1, -320, 0.5, -225) -- Adjusted position for new height
+mainContainer.Size = UDim2.new(0, 300, 0, 350) -- Reduced height for compact mode
+mainContainer.Position = UDim2.new(1, -320, 0.5, -175) -- Adjusted position for new height
 mainContainer.BackgroundColor3 = THEME.BACKGROUND
 mainContainer.BackgroundTransparency = 0.3
 mainContainer.BorderSizePixel = 0
@@ -484,13 +499,57 @@ rotationKeybindButton.Parent = keybindContainer
 createUICorner(rotationKeybindButton, 6)
 createUIStroke(rotationKeybindButton, 1, THEME.NEUTRAL)
 
--- Animation tracking section (moved down to make room for settings)
+-- Add Advanced Mode toggle container
+local advancedToggleContainer = Instance.new("Frame")
+advancedToggleContainer.Name = "AdvancedToggleContainer"
+advancedToggleContainer.Size = UDim2.new(1, 0, 0, 25)
+advancedToggleContainer.Position = UDim2.new(0, 0, 0, 230) -- Position before animation section
+advancedToggleContainer.BackgroundTransparency = 1
+advancedToggleContainer.ZIndex = 13
+advancedToggleContainer.Parent = contentContainer
+
+local advancedToggleLabel = Instance.new("TextLabel")
+advancedToggleLabel.Name = "AdvancedToggleLabel"
+advancedToggleLabel.Size = UDim2.new(0, 140, 1, 0)
+advancedToggleLabel.BackgroundTransparency = 1
+advancedToggleLabel.TextColor3 = THEME.TEXT_SECONDARY
+advancedToggleLabel.TextSize = 14
+advancedToggleLabel.Font = Enum.Font.Gotham
+advancedToggleLabel.Text = "Advanced Mode:"
+advancedToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+advancedToggleLabel.ZIndex = 14
+advancedToggleLabel.Parent = advancedToggleContainer
+
+-- Toggle switch for Advanced Mode
+local advancedToggleSwitch = Instance.new("TextButton")
+advancedToggleSwitch.Name = "AdvancedToggleSwitch"
+advancedToggleSwitch.Size = UDim2.new(0, 45, 0, 24)
+advancedToggleSwitch.Position = UDim2.new(0, 150, 0.5, -12)
+advancedToggleSwitch.BackgroundColor3 = THEME.NEUTRAL -- OFF state by default
+advancedToggleSwitch.BorderSizePixel = 0
+advancedToggleSwitch.Text = ""
+advancedToggleSwitch.ZIndex = 14
+advancedToggleSwitch.Parent = advancedToggleContainer
+createUICorner(advancedToggleSwitch, 12)
+
+local advancedToggleIndicator = Instance.new("Frame")
+advancedToggleIndicator.Name = "AdvancedToggleIndicator"
+advancedToggleIndicator.Size = UDim2.new(0, 18, 0, 18)
+advancedToggleIndicator.Position = UDim2.new(0, 3, 0.5, -9) -- Position on left for OFF state
+advancedToggleIndicator.BackgroundColor3 = THEME.TEXT_PRIMARY
+advancedToggleIndicator.BorderSizePixel = 0
+advancedToggleIndicator.ZIndex = 15
+advancedToggleIndicator.Parent = advancedToggleSwitch
+createUICorner(advancedToggleIndicator, 9)
+
+-- Animation tracking section (moved down to make room for advanced toggle)
 local animSection = Instance.new("Frame")
 animSection.Name = "AnimationSection"
-animSection.Size = UDim2.new(1, 0, 0, 150)
-animSection.Position = UDim2.new(0, 0, 0, 230) -- Moved down to accommodate new controls
+animSection.Size = UDim2.new(1, 0, 0, 210) -- Reduced height to create more separation
+animSection.Position = UDim2.new(0, 0, 0, 260) -- Kept same position
 animSection.BackgroundTransparency = 1
 animSection.ZIndex = 12
+animSection.Visible = false -- Hidden by default
 animSection.Parent = contentContainer
 
 local animHeader = Instance.new("TextLabel")
@@ -507,7 +566,7 @@ animHeader.Parent = animSection
 
 local animContainer = Instance.new("Frame")
 animContainer.Name = "AnimContainer"
-animContainer.Size = UDim2.new(1, 0, 0, 125)
+animContainer.Size = UDim2.new(1, 0, 0, 185) -- Reduced height to create more space
 animContainer.Position = UDim2.new(0, 0, 0, 25)
 animContainer.BackgroundColor3 = THEME.BACKGROUND
 animContainer.BackgroundTransparency = 0.5
@@ -529,7 +588,7 @@ animScrollFrame.Parent = animContainer
 
 local animTracker = Instance.new("TextLabel")
 animTracker.Name = "AnimTracker"
-animTracker.Size = UDim2.new(1, -10, 0, 115)
+animTracker.Size = UDim2.new(1, -10, 0, 200) -- Significantly increased height for animation display
 animTracker.BackgroundTransparency = 1
 animTracker.TextColor3 = THEME.TEXT_SECONDARY
 animTracker.TextSize = 14
@@ -541,14 +600,15 @@ animTracker.TextWrapped = true
 animTracker.ZIndex = 15
 animTracker.Parent = animScrollFrame
 
--- Control buttons section
+-- Control buttons section - significantly separated from animation section
 local controlsSection = Instance.new("Frame")
 controlsSection.Name = "ControlsSection"
-controlsSection.Size = UDim2.new(1, 0, 0, 40)
-controlsSection.Position = UDim2.new(0, 0, 1, -40)
+controlsSection.Size = UDim2.new(0, 280, 0, 40)
+controlsSection.Position = UDim2.new(0.5, -140, 0, 545) -- Moved further down
 controlsSection.BackgroundTransparency = 1
-controlsSection.ZIndex = 12
-controlsSection.Parent = contentContainer
+controlsSection.ZIndex = 20 -- High z-index to ensure it's above everything
+controlsSection.Visible = false -- Hidden by default (Advanced Mode)
+controlsSection.Parent = mainContainer
 
 -- Function to create a button
 local function createButton(name, text, position, color)
@@ -562,7 +622,7 @@ local function createButton(name, text, position, color)
     button.TextColor3 = THEME.TEXT_PRIMARY
     button.TextSize = 14
     button.Font = Enum.Font.GothamBold
-    button.ZIndex = 13
+    button.ZIndex = 25  -- Further increased z-index to ensure visibility
     button.Parent = controlsSection
     createUICorner(button, 8)
     createShadow(button)
@@ -583,20 +643,20 @@ local saveButton = createButton(
     THEME.ACCENT_PRIMARY
 )
 
--- Create bottom info bar
+-- Create bottom info bar with position for compact mode
 local infoBar = Instance.new("TextLabel")
 infoBar.Name = "InfoBar"
 infoBar.Size = UDim2.new(1, 0, 0, 20)
-infoBar.Position = UDim2.new(0, 0, 1, -20)
+infoBar.Position = UDim2.new(0, 0, 0, 320) -- Positioned for compact mode
 infoBar.BackgroundColor3 = THEME.BACKGROUND
-infoBar.BackgroundTransparency = 0.4
+infoBar.BackgroundTransparency = 0.6 -- More transparent
 infoBar.BorderSizePixel = 0
 infoBar.Text = string.format("Press [%s] to toggle auto-block | [%s] for auto-rotation", 
     string.char(autoBlockKeybind.Value), string.char(autoRotationKeybind.Value))
 infoBar.TextColor3 = THEME.TEXT_SECONDARY
-infoBar.TextSize = 12
+infoBar.TextSize = 10 -- Smaller text
 infoBar.Font = Enum.Font.Gotham
-infoBar.ZIndex = 11
+infoBar.ZIndex = 9 -- Lower z-index
 infoBar.Parent = mainContainer
 createUICorner(infoBar, 6)
 
@@ -641,6 +701,91 @@ expandButton.Font = Enum.Font.GothamBold
 expandButton.ZIndex = 11
 expandButton.Parent = minimizedFrame
 createUICorner(expandButton, 6)
+
+-- Function to toggle Advanced Mode with animation
+local advancedModeEnabled = false
+local function toggleAdvancedMode()
+    advancedModeEnabled = not advancedModeEnabled
+    
+    -- Update toggle switch appearance
+    if advancedModeEnabled then
+        advancedToggleSwitch.BackgroundColor3 = THEME.SUCCESS
+        advancedToggleIndicator.Position = UDim2.new(1, -21, 0.5, -9)
+        
+        -- Hide sections immediately before resizing to prevent visual glitches
+        animSection.Visible = false
+        controlsSection.Visible = false
+        
+        -- Tween to expanded size
+        local tween = tweenSize(
+            mainContainer, 
+            UDim2.new(0, 300, 0, 650), 
+            UDim2.new(1, -320, 0.5, -325),
+            0.4
+        )
+        
+        -- After animation completes, show advanced sections
+        tween.Completed:Connect(function()
+            animSection.Visible = true
+            controlsSection.Visible = true
+            
+            -- Update info bar position
+            infoBar.Position = UDim2.new(0, 0, 0, 620)
+        end)
+    else
+        -- Hide advanced sections immediately
+        animSection.Visible = false
+        controlsSection.Visible = false
+        
+        -- Tween to compact size
+        tweenSize(
+            mainContainer, 
+            UDim2.new(0, 300, 0, 350), 
+            UDim2.new(1, -320, 0.5, -175),
+            0.4
+        )
+        
+        -- Update info bar position
+        infoBar.Position = UDim2.new(0, 0, 0, 320)
+    end
+    
+    -- Create notification
+    local notification = Instance.new("Frame")
+    notification.Name = "AdvancedModeNotification"
+    notification.Size = UDim2.new(0, 250, 0, 40)
+    notification.Position = UDim2.new(0.5, -125, 0.7, 0)
+    notification.BackgroundColor3 = advancedModeEnabled and THEME.SUCCESS or THEME.NEUTRAL
+    notification.BackgroundTransparency = 0.2
+    notification.BorderSizePixel = 0
+    notification.ZIndex = 100
+    notification.Parent = screenGui
+    createUICorner(notification, 8)
+    createShadow(notification)
+    
+    local notificationText = Instance.new("TextLabel")
+    notificationText.Size = UDim2.new(1, -10, 1, 0)
+    notificationText.Position = UDim2.new(0, 5, 0, 0)
+    notificationText.BackgroundTransparency = 1
+    notificationText.TextColor3 = THEME.TEXT_PRIMARY
+    notificationText.TextSize = 14
+    notificationText.Font = Enum.Font.GothamBold
+    notificationText.Text = "Advanced Mode: " .. (advancedModeEnabled and "ENABLED" or "DISABLED")
+    notificationText.ZIndex = 101
+    notificationText.Parent = notification
+    
+    spawn(function()
+        wait(2)
+        for i = 1, 10 do
+            notification.BackgroundTransparency = 0.2 + (i * 0.08)
+            notificationText.TextTransparency = i * 0.1
+            wait(0.05)
+        end
+        notification:Destroy()
+    end)
+end
+
+-- Connect Advanced Mode toggle
+advancedToggleSwitch.MouseButton1Click:Connect(toggleAdvancedMode)
 
 -- Function to toggle minimized state
 local isMinimized = false
@@ -1056,6 +1201,45 @@ game.Players.PlayerAdded:Connect(safely(function(player)
     end))
 end))
 
+-- Function to reload player every 10 seconds
+local function reloadPlayerData()
+    spawn(function()
+        while true do
+            wait(10)  -- Wait for 10 seconds
+            
+            safely(function()
+                -- Update player reference
+                local oldCharacter = character
+                character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+                
+                -- If character has changed, update detection mark
+                if character ~= oldCharacter and character:FindFirstChild("HumanoidRootPart") then
+                    local position = character.HumanoidRootPart.Position - Vector3.new(0, 2.95, 0)
+                    detectionMark.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+                    outerRing.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+                end
+                
+                -- Re-detect animations to ensure all players' animations are tracked
+                allAnimations = getAllAnimationsFromPaths()
+                
+                if not allAnimations or #allAnimations == 0 then
+                    allAnimations = {}
+                end
+                
+                allAnimationIds = {}
+                for _, anim in ipairs(allAnimations) do
+                    table.insert(allAnimationIds, anim.id)
+                end
+                
+                detectAttackAnimations()
+            end)()
+        end
+    end)
+end
+
+-- Start the player reload loop
+reloadPlayerData()
+
 localPlayer.CharacterAdded:Connect(safely(function(newCharacter)
     character = newCharacter
     local hrp = newCharacter:WaitForChild("HumanoidRootPart", 5)
@@ -1302,6 +1486,7 @@ rotationKeybindButton.MouseButton1Click:Connect(function()
     waitForKeybind("rotation")
 end)
 
+-- Connect toggle animations button
 toggleButton.MouseButton1Click:Connect(function()
     showAllAnimations = not showAllAnimations
     animTracker.Text = showAllAnimations and "Tracking animations..." or "Animation tracking disabled."
@@ -1309,6 +1494,7 @@ toggleButton.MouseButton1Click:Connect(function()
     toggleButton.Text = showAllAnimations and "Hide Animations" or "Show Animations"
 end)
 
+-- Connect blacklist button
 saveButton.MouseButton1Click:Connect(function()
     if #recentAnimations > 0 then
         local selectedAnim = recentAnimations[1]
@@ -1534,14 +1720,20 @@ helpContent.Text = [[
 • Press your auto-rotation keybind (default R) to toggle 
   auto-rotation towards enemies.
 
-• Enable "Show Animations" to track all animations 
-  played by nearby players.
+• Enable "Advanced Mode" to access animation tracking
+  and blacklisting features.
 
-• Use "Blacklist Selected" to ignore specific animations.
+• When Advanced Mode is on, use "Show Animations" to 
+  track all animations played by nearby players.
+
+• In Advanced Mode, use "Blacklist Selected" to ignore
+  specific animations.
 
 • The green circle shows your current detection radius.
 
 • For best results, use with shift-lock camera mode.
+
+• Player data is automatically refreshed in background.
 ]]
 helpContent.TextWrapped = true
 helpContent.TextXAlignment = Enum.TextXAlignment.Left
