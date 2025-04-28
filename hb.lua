@@ -8,9 +8,11 @@ local blockCooldown = 0.3
 local lastAnimationTime = 0
 local animationSpamThreshold = 0.7
 local currentTarget = nil
-local autoRotationEnabled = true
--- Added toggle for Auto Block
-local autoBlockEnabled = true
+-- Changed all toggle features to OFF by default
+local autoRotationEnabled = false
+local autoBlockEnabled = false
+-- Added new toggle for mark visibility
+local showDetectionMark = false
 -- Keybind for toggling Auto Block
 local autoBlockKeybind = Enum.KeyCode.X -- Default keybind
 -- Keybind for toggling auto-rotation
@@ -119,6 +121,8 @@ detectionMark.Material = Enum.Material.Neon
 local position = character.HumanoidRootPart.Position - Vector3.new(0, 2.95, 0)
 -- The correct rotation to make a cylinder lay flat on the ground
 detectionMark.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+-- Initially hide the detection mark since showDetectionMark is false by default
+detectionMark.Transparency = 1
 detectionMark.Parent = workspace
 
 -- Add an outer ring with proper orientation
@@ -132,6 +136,8 @@ outerRing.Shape = Enum.PartType.Cylinder
 outerRing.Material = Enum.Material.Neon
 -- Same correct rotation to make a cylinder lay flat
 outerRing.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+-- Initially hide the outer ring
+outerRing.Transparency = 1
 outerRing.Parent = workspace
 
 -- Create Main UI
@@ -144,8 +150,8 @@ screenGui.Parent = localPlayer.PlayerGui
 -- Create main container frame
 local mainContainer = Instance.new("Frame")
 mainContainer.Name = "MainContainer"
-mainContainer.Size = UDim2.new(0, 300, 0, 420) -- Increased height for new controls
-mainContainer.Position = UDim2.new(1, -320, 0.5, -210) -- Adjusted position for new height
+mainContainer.Size = UDim2.new(0, 300, 0, 450) -- Increased height for new controls
+mainContainer.Position = UDim2.new(1, -320, 0.5, -225) -- Adjusted position for new height
 mainContainer.BackgroundColor3 = THEME.BACKGROUND
 mainContainer.BackgroundTransparency = 0.3
 mainContainer.BorderSizePixel = 0
@@ -256,7 +262,7 @@ blockIndicator.BackgroundTransparency = 1
 blockIndicator.TextColor3 = THEME.TEXT_PRIMARY
 blockIndicator.TextSize = 16
 blockIndicator.Font = Enum.Font.GothamSemibold
-blockIndicator.Text = "AUTO-BLOCK: READY"
+blockIndicator.Text = "AUTO-BLOCK: OFF" -- Changed to OFF by default
 blockIndicator.TextXAlignment = Enum.TextXAlignment.Left
 blockIndicator.ZIndex = 14
 blockIndicator.Parent = blockStatusContainer
@@ -266,7 +272,7 @@ local toggleSwitch = Instance.new("TextButton")
 toggleSwitch.Name = "ToggleSwitch"
 toggleSwitch.Size = UDim2.new(0, 45, 0, 24)
 toggleSwitch.Position = UDim2.new(1, -55, 0.5, -12)
-toggleSwitch.BackgroundColor3 = THEME.SUCCESS -- Green for ON
+toggleSwitch.BackgroundColor3 = THEME.NEUTRAL -- Changed to NEUTRAL for OFF state
 toggleSwitch.BorderSizePixel = 0
 toggleSwitch.Text = ""
 toggleSwitch.ZIndex = 14
@@ -276,7 +282,7 @@ createUICorner(toggleSwitch, 12)
 local toggleIndicator = Instance.new("Frame")
 toggleIndicator.Name = "ToggleIndicator"
 toggleIndicator.Size = UDim2.new(0, 18, 0, 18)
-toggleIndicator.Position = UDim2.new(1, -21, 0.5, -9)
+toggleIndicator.Position = UDim2.new(0, 3, 0.5, -9) -- Position on left for OFF state
 toggleIndicator.BackgroundColor3 = THEME.TEXT_PRIMARY
 toggleIndicator.BorderSizePixel = 0
 toggleIndicator.ZIndex = 15
@@ -299,7 +305,7 @@ local targetIcon = Instance.new("Frame")
 targetIcon.Name = "TargetIcon"
 targetIcon.Size = UDim2.new(0, 16, 0, 16)
 targetIcon.Position = UDim2.new(0, 12, 0.5, -8)
-targetIcon.BackgroundColor3 = THEME.WARNING
+targetIcon.BackgroundColor3 = THEME.NEUTRAL -- Changed to NEUTRAL since auto-rotation is off by default
 targetIcon.BorderSizePixel = 0
 targetIcon.ZIndex = 14
 targetIcon.Parent = targetStatusContainer
@@ -310,10 +316,10 @@ targetIndicator.Name = "TargetStatus"
 targetIndicator.Size = UDim2.new(1, -45, 1, 0)
 targetIndicator.Position = UDim2.new(0, 40, 0, 0)
 targetIndicator.BackgroundTransparency = 1
-targetIndicator.TextColor3 = THEME.WARNING
+targetIndicator.TextColor3 = Color3.fromRGB(170, 170, 170) -- Changed to a gray color for OFF state
 targetIndicator.TextSize = 16
 targetIndicator.Font = Enum.Font.GothamSemibold
-targetIndicator.Text = "NO TARGET"
+targetIndicator.Text = "AUTO-ROTATION: OFF" -- Changed to OFF by default
 targetIndicator.TextXAlignment = Enum.TextXAlignment.Left
 targetIndicator.ZIndex = 14
 targetIndicator.Parent = targetStatusContainer
@@ -321,7 +327,7 @@ targetIndicator.Parent = targetStatusContainer
 -- New section for settings
 local settingsSection = Instance.new("Frame")
 settingsSection.Name = "SettingsSection"
-settingsSection.Size = UDim2.new(1, 0, 0, 80)
+settingsSection.Size = UDim2.new(1, 0, 0, 110) -- Increased height for new toggle
 settingsSection.Position = UDim2.new(0, 0, 0, 110)
 settingsSection.BackgroundTransparency = 1
 settingsSection.ZIndex = 12
@@ -394,11 +400,54 @@ radiusValue.TextXAlignment = Enum.TextXAlignment.Right
 radiusValue.ZIndex = 14
 radiusValue.Parent = radiusContainer
 
+-- NEW: Show Detection Mark Toggle Container
+local markToggleContainer = Instance.new("Frame")
+markToggleContainer.Name = "MarkToggleContainer"
+markToggleContainer.Size = UDim2.new(1, 0, 0, 25)
+markToggleContainer.Position = UDim2.new(0, 0, 0, 55)
+markToggleContainer.BackgroundTransparency = 1
+markToggleContainer.ZIndex = 13
+markToggleContainer.Parent = settingsSection
+
+local markToggleLabel = Instance.new("TextLabel")
+markToggleLabel.Name = "MarkToggleLabel"
+markToggleLabel.Size = UDim2.new(0, 140, 1, 0)
+markToggleLabel.BackgroundTransparency = 1
+markToggleLabel.TextColor3 = THEME.TEXT_SECONDARY
+markToggleLabel.TextSize = 14
+markToggleLabel.Font = Enum.Font.Gotham
+markToggleLabel.Text = "Show Detection Mark:"
+markToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+markToggleLabel.ZIndex = 14
+markToggleLabel.Parent = markToggleContainer
+
+-- Toggle switch for Detection Mark
+local markToggleSwitch = Instance.new("TextButton")
+markToggleSwitch.Name = "MarkToggleSwitch"
+markToggleSwitch.Size = UDim2.new(0, 45, 0, 24)
+markToggleSwitch.Position = UDim2.new(0, 150, 0.5, -12)
+markToggleSwitch.BackgroundColor3 = THEME.NEUTRAL -- OFF state by default
+markToggleSwitch.BorderSizePixel = 0
+markToggleSwitch.Text = ""
+markToggleSwitch.ZIndex = 14
+markToggleSwitch.Parent = markToggleContainer
+createUICorner(markToggleSwitch, 12)
+
+local markToggleIndicator = Instance.new("Frame")
+markToggleIndicator.Name = "MarkToggleIndicator"
+markToggleIndicator.Size = UDim2.new(0, 18, 0, 18)
+markToggleIndicator.Position = UDim2.new(0, 3, 0.5, -9) -- Position on left for OFF state
+markToggleIndicator.BackgroundColor3 = THEME.TEXT_PRIMARY
+markToggleIndicator.BorderSizePixel = 0
+markToggleIndicator.ZIndex = 15
+markToggleIndicator.Parent = markToggleSwitch
+createUICorner(markToggleIndicator, 9)
+
 -- Keybind buttons
 local keybindContainer = Instance.new("Frame")
 keybindContainer.Name = "KeybindContainer"
 keybindContainer.Size = UDim2.new(1, 0, 0, 25)
-keybindContainer.Position = UDim2.new(0, 0, 0, 55)
+keybindContainer.Position = UDim2.new(0, 0, 0, 85) -- Moved down to accommodate new toggle
 keybindContainer.BackgroundTransparency = 1
 keybindContainer.ZIndex = 13
 keybindContainer.Parent = settingsSection
@@ -439,7 +488,7 @@ createUIStroke(rotationKeybindButton, 1, THEME.NEUTRAL)
 local animSection = Instance.new("Frame")
 animSection.Name = "AnimationSection"
 animSection.Size = UDim2.new(1, 0, 0, 150)
-animSection.Position = UDim2.new(0, 0, 0, 200) -- Moved down
+animSection.Position = UDim2.new(0, 0, 0, 230) -- Moved down to accommodate new controls
 animSection.BackgroundTransparency = 1
 animSection.ZIndex = 12
 animSection.Parent = contentContainer
@@ -574,7 +623,7 @@ miniBlockStatus.BackgroundTransparency = 1
 miniBlockStatus.TextColor3 = THEME.TEXT_PRIMARY
 miniBlockStatus.TextSize = 14
 miniBlockStatus.Font = Enum.Font.GothamSemibold
-miniBlockStatus.Text = "AUTO-BLOCK: READY"
+miniBlockStatus.Text = "AUTO-BLOCK: OFF" -- Changed to OFF by default
 miniBlockStatus.TextXAlignment = Enum.TextXAlignment.Left
 miniBlockStatus.ZIndex = 11
 miniBlockStatus.Parent = minimizedFrame
@@ -1015,9 +1064,9 @@ localPlayer.CharacterAdded:Connect(safely(function(newCharacter)
     end
     isCurrentlyBlocking = false
     currentTarget = nil
-    targetIndicator.Text = "NO TARGET"
-    targetIcon.BackgroundColor3 = THEME.WARNING
-    targetIndicator.TextColor3 = THEME.WARNING
+    targetIndicator.Text = "AUTO-ROTATION: OFF" -- Changed to OFF by default
+    targetIcon.BackgroundColor3 = THEME.NEUTRAL
+    targetIndicator.TextColor3 = Color3.fromRGB(170, 170, 170)
     releaseCameraControl()
     detectionMark.Position = hrp.Position - Vector3.new(0, 2.95, 0)
     detectAttackAnimations()
@@ -1084,8 +1133,57 @@ local function toggleAutoBlock()
     end)
 end
 
--- Connect toggle switch to toggle function
+-- NEW: Function to toggle detection mark visibility
+local function toggleDetectionMark()
+    showDetectionMark = not showDetectionMark
+    
+    -- Update toggle switch appearance
+    if showDetectionMark then
+        markToggleSwitch.BackgroundColor3 = THEME.SUCCESS
+        markToggleIndicator.Position = UDim2.new(1, -21, 0.5, -9)
+    else
+        markToggleSwitch.BackgroundColor3 = THEME.NEUTRAL
+        markToggleIndicator.Position = UDim2.new(0, 3, 0.5, -9)
+    end
+    
+    -- Create notification
+    local notification = Instance.new("Frame")
+    notification.Name = "MarkToggleNotification"
+    notification.Size = UDim2.new(0, 250, 0, 40)
+    notification.Position = UDim2.new(0.5, -125, 0.7, 0)
+    notification.BackgroundColor3 = showDetectionMark and THEME.SUCCESS or THEME.NEUTRAL
+    notification.BackgroundTransparency = 0.2
+    notification.BorderSizePixel = 0
+    notification.ZIndex = 100
+    notification.Parent = screenGui
+    createUICorner(notification, 8)
+    createShadow(notification)
+    
+    local notificationText = Instance.new("TextLabel")
+    notificationText.Size = UDim2.new(1, -10, 1, 0)
+    notificationText.Position = UDim2.new(0, 5, 0, 0)
+    notificationText.BackgroundTransparency = 1
+    notificationText.TextColor3 = THEME.TEXT_PRIMARY
+    notificationText.TextSize = 14
+    notificationText.Font = Enum.Font.GothamBold
+    notificationText.Text = "Detection Mark: " .. (showDetectionMark and "VISIBLE" or "HIDDEN")
+    notificationText.ZIndex = 101
+    notificationText.Parent = notification
+    
+    spawn(function()
+        wait(2)
+        for i = 1, 10 do
+            notification.BackgroundTransparency = 0.2 + (i * 0.08)
+            notificationText.TextTransparency = i * 0.1
+            wait(0.05)
+        end
+        notification:Destroy()
+    end)
+end
+
+-- Connect toggle switches to toggle functions
 toggleSwitch.MouseButton1Click:Connect(toggleAutoBlock)
+markToggleSwitch.MouseButton1Click:Connect(toggleDetectionMark)
 
 -- Function to update the detection radius
 local function updateRadius(newRadius)
@@ -1262,6 +1360,16 @@ spawn(safely(function()
 				local position = localPlayer.Character.HumanoidRootPart.Position - Vector3.new(0, 2.95, 0)
 				detectionMark.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
 				outerRing.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+                
+                -- Update detection mark visibility based on toggle
+                if showDetectionMark then
+                    -- Use pulse effect when visible
+                    -- (The pulse effect code is at the bottom of the script)
+                else
+                    -- Hide completely when disabled
+                    detectionMark.Transparency = 1
+                    outerRing.Transparency = 1
+                end
 			end
 		end)()
         safely(function()
@@ -1417,6 +1525,8 @@ helpContent.Font = Enum.Font.Gotham
 helpContent.Text = [[
 • Toggle auto-block on/off with the switch or keybind.
 
+• Show or hide the detection radius with the toggle.
+
 • Adjust detection radius with the slider (5-30).
 
 • Change keybinds by clicking on the keybind buttons.
@@ -1461,16 +1571,25 @@ closeHelpButton.MouseButton1Click:Connect(function()
     helpPanel.Visible = false
 end)
 
--- Create a simple pulse effect
+-- Create a simple pulse effect (only active when showDetectionMark is true)
 spawn(function()
     while true do
-        for i = 0, 1, 0.1 do
-            detectionMark.Transparency = 0.5 + (i * 0.25)
-            wait(0.03)
-        end
-        for i = 0, 1, 0.1 do
-            detectionMark.Transparency = 0.75 - (i * 0.25)
-            wait(0.03)
+        if showDetectionMark then
+            for i = 0, 1, 0.1 do
+                detectionMark.Transparency = 0.5 + (i * 0.25)
+                outerRing.Transparency = 0.4 + (i * 0.25)
+                wait(0.03)
+            end
+            for i = 0, 1, 0.1 do
+                detectionMark.Transparency = 0.75 - (i * 0.25)
+                outerRing.Transparency = 0.65 - (i * 0.25)
+                wait(0.03)
+            end
+        else
+            -- Keep invisible when disabled
+            detectionMark.Transparency = 1
+            outerRing.Transparency = 1
+            wait(0.1) -- Small wait to prevent CPU hogging
         end
     end
 end)
@@ -1495,7 +1614,7 @@ welcomeText.BackgroundTransparency = 1
 welcomeText.TextColor3 = THEME.TEXT_PRIMARY
 welcomeText.TextSize = 16
 welcomeText.Font = Enum.Font.GothamBold
-welcomeText.Text = "⚔️ Improved Auto-Block System ⚔️\nPress ? for help | Toggle with " .. string.char(autoBlockKeybind.Value)
+welcomeText.Text = "⚔️ Improved Auto-Block System ⚔️\nPress ? for help | All features are OFF by default"
 welcomeText.TextWrapped = true
 welcomeText.ZIndex = 101
 welcomeText.Parent = welcomeNotif
